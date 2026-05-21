@@ -1,0 +1,92 @@
+from dotenv import load_dotenv
+import os
+from datetime import datetime
+
+from google.adk import Agent
+from google.adk.models import Gemini
+
+# -------------------------
+# LOAD ENV
+# -------------------------
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# -------------------------
+# TOOL
+# -------------------------
+def get_time():
+    """Returns current system time"""
+    now = datetime.now().strftime("%I:%M %p")
+    return {
+        "current_time": now
+    }
+
+# -------------------------
+# TIME AGENT
+# -------------------------
+time_agent = Agent(
+    name="time_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a specialized time assistant.
+
+Rules:
+- Handle ONLY time-related questions
+- If user asks current time, MUST call get_time tool
+- Return the time nicely
+
+Examples:
+User: What is the time now?
+Answer: The current time is 07:30 PM
+""",
+
+    tools=[get_time]
+)
+
+# -------------------------
+# GENERAL AGENT
+# -------------------------
+general_agent = Agent(
+    name="general_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a general assistant.
+
+Rules:
+- Handle all non-time-related questions
+- Answer greetings
+- Answer general knowledge questions
+- Be helpful and concise
+"""
+)
+
+# -------------------------
+# ROOT AGENT (ROUTER)
+# -------------------------
+root_agent = Agent(
+    name="root_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are the main router.
+
+Routing rules:
+- If the user asks about time, current time, clock, timezone → delegate to time_agent
+- For ALL other questions → delegate to general_agent
+
+IMPORTANT:
+- Choose ONLY ONE agent
+- Do NOT answer yourself
+""",
+
+    sub_agents=[
+        time_agent,
+        general_agent
+    ]
+)

@@ -1,0 +1,74 @@
+from dotenv import load_dotenv
+import os
+
+from google.adk import Agent
+from google.adk.agents import SequentialAgent
+from google.adk.models import Gemini
+
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# -------------------------
+# RESEARCH AGENT
+# -------------------------
+research_agent = Agent(
+    name="research_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a travel researcher.
+
+Research:
+- attractions
+- food
+- transport
+- best time to visit
+
+Provide travel research.
+"""
+)
+
+# -------------------------
+# PLANNER AGENT
+# -------------------------
+planner_agent = Agent(
+    name="planner_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a travel planner.
+
+Use previous research and create a 3-day itinerary.
+"""
+)
+
+# -------------------------
+# SEQUENTIAL TEAM
+# -------------------------
+travel_team = SequentialAgent(
+    name="travel_team",
+
+    sub_agents=[
+        research_agent,
+        planner_agent
+    ]
+)
+
+# -------------------------
+# ROOT AGENT
+# -------------------------
+root_agent = Agent(
+    name="root_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+Help user plan trips.
+Delegate to travel_team.
+""",
+
+    sub_agents=[travel_team]
+)

@@ -1,0 +1,39 @@
+from dotenv import load_dotenv
+import os
+from google.adk import Agent
+from google.adk.models import Gemini
+
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# ----------------
+# TOOL
+# ----------------
+def get_time():
+    from datetime import datetime
+    now = datetime.now().strftime("%I:%M %p")
+    return {
+        "current_time": now
+    }
+
+# ----------------
+# ROOT AGENT
+# ----------------
+root_agent = Agent(
+    name="hello_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a helpful assistant.
+
+IMPORTANT:
+If the user asks for current time, you MUST call the get_time tool.
+
+After calling the tool, return the result to the user.
+""",
+
+    tools=[get_time]
+)
+

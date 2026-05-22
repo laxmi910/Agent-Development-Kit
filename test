@@ -1,0 +1,265 @@
+create a folder named Multi_AGENT
+mkdir adk_demo
+cd adk_demo
+
+Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+pip install google-adk python-dotenv
+
+nano .env
+GOOGLE_API_KEY=your_api_key
+MODEL=gemini-2.0-flash
+
+
+
+
+
+
+from dotenv import load_dotenv
+import os
+from google.adk import Agent
+from google.adk.models import Gemini
+
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+root_agent = Agent(
+    name="hello_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a friendly assistant.
+
+Greet the user and answer simple questions.
+"""
+)
+
+
+
+
+
+-----------run > adk run hello_agent
+
+----------------------x--------------------------------
+
+
+from dotenv import load_dotenv
+import os
+from google.adk import Agent
+from google.adk.models import Gemini
+
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# ----------------
+# TOOL
+# ----------------
+def get_time():
+    from datetime import datetime
+    now = datetime.now().strftime("%I:%M %p")
+    return {
+        "current_time": now
+    }
+
+# ----------------
+# ROOT AGENT
+# ----------------
+root_agent = Agent(
+    name="hello_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a helpful assistant.
+
+IMPORTANT:
+If the user asks for current time, you MUST call the get_time tool.
+
+After calling the tool, return the result to the user.
+""",
+
+    tools=[get_time]
+)
+
+
+---lab 3--------------------------------------------------------------------------------
+
+from dotenv import load_dotenv
+import os
+from datetime import datetime
+
+from google.adk import Agent
+from google.adk.models import Gemini
+
+# -------------------------
+# LOAD ENV
+# -------------------------
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# -------------------------
+# TOOL
+# -------------------------
+def get_time():
+    """Returns current system time"""
+    now = datetime.now().strftime("%I:%M %p")
+    return {
+        "current_time": now
+    }
+
+# -------------------------
+# TIME AGENT
+# -------------------------
+time_agent = Agent(
+    name="time_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a specialized time assistant.
+
+Rules:
+- Handle ONLY time-related questions
+- If user asks current time, MUST call get_time tool
+- Return the time nicely
+
+Examples:
+User: What is the time now?
+Answer: The current time is 07:30 PM
+""",
+
+    tools=[get_time]
+)
+
+# -------------------------
+# GENERAL AGENT
+# -------------------------
+general_agent = Agent(
+    name="general_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a general assistant.
+
+Rules:
+- Handle all non-time-related questions
+- Answer greetings
+- Answer general knowledge questions
+- Be helpful and concise
+"""
+)
+
+# -------------------------
+# ROOT AGENT (ROUTER)
+# -------------------------
+root_agent = Agent(
+    name="root_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are the main router.
+
+Routing rules:
+- If the user asks about time, current time, clock, timezone → delegate to time_agent
+- For ALL other questions → delegate to general_agent
+
+IMPORTANT:
+- Choose ONLY ONE agent
+- Do NOT answer yourself
+""",
+
+    sub_agents=[
+        time_agent,
+        general_agent
+    ]
+)
+
+
+
+---lab4 ---seequesntial-------------------------------------------
+
+
+from dotenv import load_dotenv
+import os
+
+from google.adk import Agent
+from google.adk.agents import SequentialAgent
+from google.adk.models import Gemini
+
+load_dotenv()
+
+MODEL = os.getenv("MODEL")
+
+# -------------------------
+# RESEARCH AGENT
+# -------------------------
+research_agent = Agent(
+    name="research_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a travel researcher.
+
+Research:
+- attractions
+- food
+- transport
+- best time to visit
+
+Provide travel research.
+"""
+)
+
+# -------------------------
+# PLANNER AGENT
+# -------------------------
+planner_agent = Agent(
+    name="planner_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+You are a travel planner.
+
+Use previous research and create a 3-day itinerary.
+"""
+)
+
+# -------------------------
+# SEQUENTIAL TEAM
+# -------------------------
+travel_team = SequentialAgent(
+    name="travel_team",
+
+    sub_agents=[
+        research_agent,
+        planner_agent
+    ]
+)
+
+# -------------------------
+# ROOT AGENT
+# -------------------------
+root_agent = Agent(
+    name="root_agent",
+
+    model=Gemini(model=MODEL),
+
+    instruction="""
+Help user plan trips.
+Delegate to travel_team.
+""",
+
+    sub_agents=[travel_team]
+)
+
+

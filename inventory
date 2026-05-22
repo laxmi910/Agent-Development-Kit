@@ -1,0 +1,191 @@
+from google.adk.agents.llm_agent import Agent
+from typing import Dict
+ 
+# =========================
+# Grocery Inventory Database
+# =========================
+inventory_db: Dict[str, Dict] = {
+    "rice": {
+        "quantity": 25,
+        "price": 60,
+    },
+    "wheat_flour": {
+        "quantity": 8,
+        "price": 45,
+    },
+    "sugar": {
+        "quantity": 12,
+        "price": 50,
+    },
+    "milk": {
+        "quantity": 5,
+        "price": 30,
+    },
+    "eggs": {
+        "quantity": 20,
+        "price": 6,
+    },
+    "salt": {
+        "quantity": 7,
+        "price": 20,
+    },
+}
+ 
+ 
+# =========================
+# Inventory Tools
+# =========================
+def add_inventory_item(
+    item_name: str,
+    quantity: int,
+    price: float,
+):
+    """
+    Adds a new grocery item to inventory.
+    """
+ 
+    item_name = item_name.lower()
+ 
+    if item_name in inventory_db:
+        return {"message": f"{item_name} already exists in inventory."}
+ 
+    inventory_db[item_name] = {
+        "quantity": quantity,
+        "price": price,
+    }
+ 
+    return {
+        "message": f"{item_name} added successfully.",
+        "item": inventory_db[item_name],
+    }
+ 
+ 
+def update_inventory_stock(
+    item_name: str,
+    quantity: int,
+):
+    """
+    Updates stock quantity for an item.
+    """
+ 
+    item_name = item_name.lower()
+ 
+    if item_name not in inventory_db:
+        return {"message": f"{item_name} not found in inventory."}
+ 
+    inventory_db[item_name]["quantity"] = quantity
+ 
+    return {
+        "message": f"{item_name} stock updated successfully.",
+        "item": inventory_db[item_name],
+    }
+ 
+ 
+def remove_inventory_item(item_name: str):
+    """
+    Removes an item from inventory.
+    """
+ 
+    item_name = item_name.lower()
+ 
+    if item_name not in inventory_db:
+        return {"message": f"{item_name} not found in inventory."}
+ 
+    removed_item = inventory_db.pop(item_name)
+ 
+    return {
+        "message": f"{item_name} removed successfully.",
+        "removed_item": removed_item,
+    }
+ 
+ 
+def search_inventory_item(item_name: str):
+    """
+    Searches inventory for a grocery item.
+    """
+ 
+    item_name = item_name.lower()
+ 
+    if item_name not in inventory_db:
+        return {"message": f"{item_name} not found."}
+ 
+    item = inventory_db[item_name]
+ 
+    restock_required = item["quantity"] < 10
+ 
+    return {
+        "item_name": item_name,
+        "details": item,
+        "restock_required": restock_required,
+    }
+ 
+ 
+def view_inventory():
+    """
+    Returns complete inventory with restock status.
+    """
+ 
+    result = {}
+ 
+    for item_name, item in inventory_db.items():
+        result[item_name] = {
+            "quantity": item["quantity"],
+            "price": item["price"],
+            "restock_required": item["quantity"] < 10,
+        }
+ 
+    return result
+ 
+ 
+def check_restock_items():
+    """
+    Returns items that require restocking.
+    """
+ 
+    low_stock_items = {}
+ 
+    for item_name, item in inventory_db.items():
+ 
+        if item["quantity"] < 10:
+            low_stock_items[item_name] = {
+                "quantity": item["quantity"],
+                "price": item["price"],
+                "status": "RESTOCK REQUIRED",
+            }
+ 
+    if not low_stock_items:
+        return {"message": "All inventory items are sufficiently stocked."}
+ 
+    return low_stock_items
+ 
+ 
+# =========================
+# Root Agent
+# =========================
+root_agent = Agent(
+    model="gemini-2.5-flash",
+    name="grocery_inventory_agent",
+    description=("An AI-powered grocery inventory management assistant."),
+    instruction=(
+        "You are a grocery inventory assistant.\n\n"
+        "Your responsibilities:\n"
+        "- Add grocery items\n"
+        "- Update stock quantities\n"
+        "- Remove items\n"
+        "- Search inventory items\n"
+        "- View all inventory\n"
+        "- Check low-stock items\n\n"
+        "Important Rule:\n"
+        "- If quantity is less than 10, mark item as "
+        "'RESTOCK REQUIRED'.\n\n"
+        "Always provide concise and structured responses."
+    ),
+    tools=[
+        add_inventory_item,
+        update_inventory_stock,
+        remove_inventory_item,
+        search_inventory_item,
+        view_inventory,
+        check_restock_items,
+    ],
+)
